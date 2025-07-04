@@ -4,10 +4,14 @@ local main_url = "https://protected-roblox-scripts.onrender.com/3d663091bfda9b10
 -- Print hook for script detection
 local _old_print = print
 local _mugen_loaded = false
+local _warmup_printed = false
 print = function(...)
     local msg = table.concat({...}, " ")
     if msg:find("invis hub mugen") then
         _mugen_loaded = true
+    end
+    if msg:find("loading...") then -- ищем print из warmup-скрипта
+        _warmup_printed = true
     end
     _old_print(...)
 end
@@ -87,12 +91,17 @@ end
 print("[Loading] Burst ping sent.")
 updateGui(5, "Burst ping sent.")
 
-wait(0.1)
+wait(0.5)
 printProgress(10)
 updateGui(10, "Executing warmup script (1/5)...")
 
--- 2. Выполнить warmup-скрипт 5 раз подряд с интервалом 0.5 сек
+-- 2. Выполнить warmup-скрипт до 5 раз, но если print("loading...") найден — сразу выходим
 for i = 1, 5 do
+    if _warmup_printed then
+        print("[Loading] Warmup print detected, skipping further warmup.")
+        updateGui(10 + i*10, "Warmup print detected, skipping warmup.")
+        break
+    end
     local warmupSuccess, warmupError = pcall(function()
         local warmup_code = game:HttpGet(warmup_url)
         if warmup_code and #warmup_code > 0 then
@@ -106,6 +115,11 @@ for i = 1, 5 do
         warn("[Loading] Warmup script error ("..i.."/5): " .. tostring(warmupError))
         updateGui(10 + i*10, "Warmup script error ("..i.."/5), continuing...")
     end
+    if _warmup_printed then
+        print("[Loading] Warmup print detected after execution, skipping further warmup.")
+        updateGui(10 + i*10, "Warmup print detected, skipping warmup.")
+        break
+    end
     wait(0.5)
 end
 
@@ -118,7 +132,7 @@ for i = 61, 90, 7 do
     updateGui(i, "Loading...")
 end
 
-wait(1)
+wait(0.5)
 printProgress(95)
 updateGui(95, "Loading main script...")
 
