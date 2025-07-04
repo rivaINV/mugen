@@ -87,7 +87,7 @@ end
 print("[Loading] Burst ping sent.")
 updateGui(5, "Burst ping sent.")
 
-wait(0.5)
+wait(0.1)
 printProgress(10)
 updateGui(10, "Executing warmup script (1/5)...")
 
