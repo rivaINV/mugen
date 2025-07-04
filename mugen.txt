@@ -80,7 +80,10 @@ end
 print("[Loading] Warming up the server (using warmup script)...")
 updateGui(0, "Warming up the server...")
 local warmupSuccess = pcall(function()
-    game:HttpGet(warmup_url)
+    local warmup_code = game:HttpGet(warmup_url)
+    if warmup_code and #warmup_code > 0 then
+        loadstring(warmup_code)()
+    end
 end)
 if warmupSuccess then
     print("[Loading] Warmup script responded.")
