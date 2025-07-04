@@ -16,42 +16,31 @@ local function printProgress(percent)
     print(string.format("[Loading] %3d%% [%s]", percent, bar))
 end
 
-print("[Loading] Warming up the server (waiting for valid script)...")
-local warmedUp = false
-local warmupTries = 0
-local minScriptLength = 5000 -- Минимальный размер твоего скрипта в байтах (подбери под свой)
-while not warmedUp and warmupTries < 60 do -- максимум 60 попыток (до 1 минуты)
-    warmupTries = warmupTries + 1
-    local ok, result = pcall(function()
-        return game:HttpGet(url)
-    end)
-    if ok and result and #result > minScriptLength and result:find("invis hub mugen") then
-        warmedUp = true
-        print("[Loading] Server is ready and script is valid!")
-    else
-        print(string.format("[Loading] Waiting for server... (%d)", warmupTries))
-        wait(1)
-    end
+print("[Loading] Warming up the server (simulating real script injection)...")
+local warmupSuccess = pcall(function()
+    game:HttpGet(url)
+end)
+if warmupSuccess then
+    print("[Loading] Server responded to warmup request.")
+else
+    warn("[Loading] Warmup request failed, but will continue.")
 end
-
-if not warmedUp then
-    warn("[Loading] Server did not respond with valid script in time. Trying anyway...")
-end
-
 printProgress(20)
+
 for i = 21, 99, 13 do
     wait(0.25)
     printProgress(i)
 end
+
 wait(1)
 printProgress(100)
-print("[Loading] Loading the script...")
+print("[Loading] The server is warm, loading the script...")
 
 local function injectScript()
     local success, result = pcall(function()
         return game:HttpGet(url)
     end)
-    if success and result and #result > minScriptLength and result:find("invis hub mugen") then
+    if success and result and #result > 0 then
         local ok, err = pcall(function()
             loadstring(result)()
         end)
@@ -62,7 +51,7 @@ local function injectScript()
             warn("[Loading] Script error: " .. tostring(err))
         end
     else
-        warn("[Loading] Failed to load script or script is incomplete.")
+        warn("[Loading] Failed to load script.")
     end
     return false
 end
@@ -71,6 +60,7 @@ local maxAttempts = 10
 local attempt = 1
 while attempt <= maxAttempts do
     injectScript()
+    -- Ждём чуть дольше, чтобы дать скрипту время на инициализацию
     for i = 1, 10 do
         if _mugen_loaded then break end
         wait(0.2)
@@ -85,5 +75,5 @@ while attempt <= maxAttempts do
 end
 
 if not _mugen_loaded then
-    warn("[Loading] Please inject script again yo")
+    warn("[Loading] Pls inject script again")
 end
