@@ -56,14 +56,23 @@ local function injectScript()
     return false
 end
 
-injectScript()
-wait(1)
+local maxAttempts = 10
+local attempt = 1
+while attempt <= maxAttempts do
+    injectScript()
+    for i = 1, 10 do
+        if _mugen_loaded then break end
+        wait(0.2)
+    end
+    if _mugen_loaded then
+        print("[Loading] Script print detected, done!")
+        break
+    else
+        print(string.format("[Loading] Attempt %d/%d failed, retrying...", attempt, maxAttempts))
+        attempt = attempt + 1
+    end
+end
 
 if not _mugen_loaded then
-    print("[Loading] Script print not detected, trying to inject the script again...")
-    injectScript()
-    wait(2)
-    if not _mugen_loaded then
-        warn("[Loading] Still no print detected. Please inject script again.")
-    end
+    warn("[Loading] Failed to load the script after 10 attempts. Please inject script again")
 end
