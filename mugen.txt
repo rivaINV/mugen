@@ -123,11 +123,11 @@ local function injectScript()
             return true
         else
             warn("[Loading] Script error: " .. tostring(err))
-            updateGui(100, "Script error!")
+            updateGui(100, "Loading...")
         end
     else
         warn("[Loading] Failed to load script.")
-        updateGui(100, "Failed to load script.")
+        updateGui(100, "Loading...")
     end
     return false
 end
