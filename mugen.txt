@@ -16,25 +16,35 @@ local function printProgress(percent)
     print(string.format("[Loading] %3d%% [%s]", percent, bar))
 end
 
-print("[Loading] Warming up the server (simulating real script injection)...")
-local warmupSuccess = pcall(function()
-    game:HttpGet(url)
-end)
-if warmupSuccess then
-    print("[Loading] Server responded to warmup request.")
-else
-    warn("[Loading] Warmup request failed, but will continue.")
+print("[Loading] Warming up the server (waiting for HTTP 200)...")
+local warmedUp = false
+local warmupTries = 0
+while not warmedUp and warmupTries < 30 do
+    warmupTries = warmupTries + 1
+    local ok, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if ok and result and #result > 0 and not result:find("404") and not result:find("Not found") then
+        warmedUp = true
+        print("[Loading] Server is ready!")
+    else
+        print(string.format("[Loading] Waiting for server... (%d)", warmupTries))
+        wait(1)
+    end
 end
-printProgress(20)
 
+if not warmedUp then
+    warn("[Loading] Server did not respond in time. Trying anyway...")
+end
+
+printProgress(20)
 for i = 21, 99, 13 do
     wait(0.25)
     printProgress(i)
 end
-
 wait(1)
 printProgress(100)
-print("[Loading] The server is warm, loading the script...")
+print("[Loading] Loading the script...")
 
 local function injectScript()
     local success, result = pcall(function()
@@ -74,5 +84,5 @@ while attempt <= maxAttempts do
 end
 
 if not _mugen_loaded then
-    warn("[Loading] Failed to load the script after 10 attempts. Please inject script again")
+    warn("[Loading] Please inject script again.")
 end
