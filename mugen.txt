@@ -90,36 +90,38 @@ else
     updateGui(5, "Warmup ping failed, continuing...")
 end
 
-wait(0.5)
+wait(0.3)
 printProgress(10)
-updateGui(10, "Executing warmup script...")
+updateGui(10, "Executing warmup script (1/3)...")
 
--- 2. Выполнить warmup-скрипт (print появится в консоли)
-local warmupSuccess, warmupError = pcall(function()
-    local warmup_code = game:HttpGet(warmup_url)
-    if warmup_code and #warmup_code > 0 then
-        loadstring(warmup_code)()
+-- 2. Выполнить warmup-скрипт 3 раза подряд с интервалом 0.5 сек
+for i = 1, 3 do
+    local warmupSuccess, warmupError = pcall(function()
+        local warmup_code = game:HttpGet(warmup_url)
+        if warmup_code and #warmup_code > 0 then
+            loadstring(warmup_code)()
+        end
+    end)
+    if warmupSuccess then
+        print("[Loading] Warmup script executed ("..i.."/3).")
+        updateGui(10 + i*10, "Warmup script executed ("..i.."/3).")
+    else
+        warn("[Loading] Warmup script error ("..i.."/3): " .. tostring(warmupError))
+        updateGui(10 + i*10, "Warmup script error ("..i.."/3), continuing...")
     end
-end)
-if warmupSuccess then
-    print("[Loading] Warmup script executed.")
-    updateGui(20, "Warmup script executed.")
-else
-    warn("[Loading] Warmup script error: " .. tostring(warmupError))
-    updateGui(20, "Warmup script error, continuing...")
+    wait(0.5)
 end
 
-wait(0.5)
-printProgress(30)
-updateGui(30, "Loading...")
+printProgress(40)
+updateGui(40, "Loading...")
 
-for i = 31, 80, 10 do
-    wait(0.15)
+for i = 41, 80, 10 do
+    wait(0.12)
     printProgress(i)
     updateGui(i, "Loading...")
 end
 
-wait(0.5)
+wait(0.3)
 printProgress(90)
 updateGui(90, "Loading main script...")
 
@@ -147,7 +149,7 @@ local function injectScript()
     return false
 end
 
-wait(0.5)
+wait(0.3)
 printProgress(100)
 updateGui(100, "Finalizing...")
 
