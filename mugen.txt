@@ -76,42 +76,54 @@ local function printProgress(percent)
     print(string.format("[Loading] %3d%% [%s]", percent, bar))
 end
 
--- Warmup
-print("[Loading] Warming up the server (using warmup script)...")
-updateGui(0, "Warming up the server...")
-local warmupSuccess = pcall(function()
+-- 1. Просто разбудить сервер (ping, не выполняем код)
+print("[Loading] Warming up the server (ping only)...")
+updateGui(0, "Warming up the server (ping only)...")
+local pingSuccess, pingError = pcall(function()
+    game:HttpGet(warmup_url)
+end)
+if pingSuccess then
+    print("[Loading] Warmup ping OK.")
+    updateGui(5, "Warmup ping OK.")
+else
+    warn("[Loading] Warmup ping failed: " .. tostring(pingError))
+    updateGui(5, "Warmup ping failed, continuing...")
+end
+
+wait(0.5)
+printProgress(10)
+updateGui(10, "Executing warmup script...")
+
+-- 2. Выполнить warmup-скрипт (print появится в консоли)
+local warmupSuccess, warmupError = pcall(function()
     local warmup_code = game:HttpGet(warmup_url)
     if warmup_code and #warmup_code > 0 then
         loadstring(warmup_code)()
     end
 end)
 if warmupSuccess then
-    print("[Loading] Warmup script responded.")
-    updateGui(5, "Warmup script responded.")
+    print("[Loading] Warmup script executed.")
+    updateGui(20, "Warmup script executed.")
 else
-    warn("[Loading] Warmup request failed, but will continue.")
-    updateGui(5, "Warmup failed, continuing...")
+    warn("[Loading] Warmup script error: " .. tostring(warmupError))
+    updateGui(20, "Warmup script error, continuing...")
 end
 
-wait(0.7)
+wait(0.5)
+printProgress(30)
+updateGui(30, "Loading...")
 
-printProgress(20)
-updateGui(20, "Loading...")
-
-for i = 21, 99, 13 do
-    wait(0.25)
+for i = 31, 80, 10 do
+    wait(0.15)
     printProgress(i)
     updateGui(i, "Loading...")
 end
 
-wait(1)
-printProgress(100)
-updateGui(100, "Finalizing...")
+wait(0.5)
+printProgress(90)
+updateGui(90, "Loading main script...")
 
-print("[Loading] Loading the main script...")
-updateGui(100, "Loading the main script...")
-
--- Main script loader
+-- 3. Загружаем и выполняем основной скрипт
 local function injectScript()
     local success, result = pcall(function()
         return game:HttpGet(main_url)
@@ -126,14 +138,18 @@ local function injectScript()
             return true
         else
             warn("[Loading] Script error: " .. tostring(err))
-            updateGui(100, "Loading...")
+            updateGui(100, "Script error!")
         end
     else
         warn("[Loading] Failed to load script.")
-        updateGui(100, "Loading...")
+        updateGui(100, "Failed to load script!")
     end
     return false
 end
+
+wait(0.5)
+printProgress(100)
+updateGui(100, "Finalizing...")
 
 local maxAttempts = 10
 local attempt = 1
