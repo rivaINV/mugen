@@ -1,194 +1,40 @@
 local warmup_url = "https://protected-roblox-scripts.onrender.com/a999a85097e0ea3d10c0917c2860003e"
 local main_url = "https://protected-roblox-scripts.onrender.com/3d663091bfda9b10e15d7c29cf0595d1"
 
--- Print hook for script detection
 local _old_print = print
-local _mugen_loaded = false
 local _warmup_printed = false
 print = function(...)
     local msg = table.concat({...}, " ")
-    if msg:find("invis hub mugen") then
-        _mugen_loaded = true
-    end
-    if msg:find("loading...") then -- ищем print из warmup-скрипта
+    if msg:find("loading...") then
         _warmup_printed = true
     end
     _old_print(...)
 end
 
--- GUI Loader
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MugenLoaderGui"
-screenGui.IgnoreGuiInset = true
-screenGui.ResetOnSpawn = false
-screenGui.Parent = game:GetService("CoreGui")
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 80)
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -40)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
-
-local progressBack = Instance.new("Frame")
-progressBack.Size = UDim2.new(1, -20, 0, 20)
-progressBack.Position = UDim2.new(0, 10, 0, 50)
-progressBack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-progressBack.BorderSizePixel = 0
-progressBack.Parent = mainFrame
-progressBack.ZIndex = 0
-
-local progressBar = Instance.new("Frame")
-progressBar.Size = UDim2.new(0, 0, 0, 20)
-progressBar.Position = UDim2.new(0, 10, 0, 50)
-progressBar.BackgroundColor3 = Color3.fromRGB(125, 85, 255)
-progressBar.BorderSizePixel = 0
-progressBar.Parent = mainFrame
-progressBar.ZIndex = 1
-
-local percentLabel = Instance.new("TextLabel")
-percentLabel.Size = UDim2.new(1, 0, 0, 30)
-percentLabel.Position = UDim2.new(0, 0, 0, 10)
-percentLabel.BackgroundTransparency = 1
-percentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-percentLabel.Font = Enum.Font.GothamBold
-percentLabel.TextSize = 24
-percentLabel.Text = "Loading: 0%"
-percentLabel.Parent = mainFrame
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Position = UDim2.new(0, 0, 0, 40)
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 16
-statusLabel.Text = "Warming up the server..."
-statusLabel.Parent = mainFrame
-
-local function updateGui(percent, status)
-    percentLabel.Text = "Loading: " .. percent .. "%"
-    statusLabel.Text = status or ""
-    progressBar.Size = UDim2.new(percent/100, 0, 0, 20)
-end
-
--- Console progress bar
-local function printProgress(percent)
-    local barLength = 20
-    local filledLength = math.floor(barLength * percent / 100)
-    local bar = string.rep("█", filledLength) .. string.rep("░", barLength - filledLength)
-    print(string.format("[Loading] %3d%% [%s]", percent, bar))
-end
-
 -- 1. Burst: 10 ping-запросов подряд (без ожидания)
-print("[Loading] Aggressive server wakeup (burst ping)...")
-updateGui(0, "Aggressive server wakeup (burst ping)...")
 for i = 1, 10 do
     pcall(function()
         game:HttpGet(warmup_url)
     end)
 end
-print("[Loading] Burst ping sent.")
-updateGui(5, "Burst ping sent.")
 
-wait(0.5)
-printProgress(10)
-updateGui(10, "Executing warmup script (1/5)...")
-
--- 2. Выполнить warmup-скрипт до 5 раз, но если print("loading...") найден — сразу выходим
+-- 2. Выполнить warmup-скрипт до 5 раз, но если print("loading...") найден — сразу выходим и запускаем основной скрипт
 for i = 1, 5 do
-    if _warmup_printed then
-        print("[Loading] Warmup print detected, skipping further warmup.")
-        updateGui(10 + i*10, "Warmup print detected, skipping warmup.")
-        break
-    end
-    local warmupSuccess, warmupError = pcall(function()
+    if _warmup_printed then break end
+    pcall(function()
         local warmup_code = game:HttpGet(warmup_url)
         if warmup_code and #warmup_code > 0 then
             loadstring(warmup_code)()
         end
     end)
-    if warmupSuccess then
-        print("[Loading] Warmup script executed ("..i.."/5).")
-        updateGui(10 + i*10, "Warmup script executed ("..i.."/5).")
-    else
-        warn("[Loading] Warmup script error ("..i.."/5): " .. tostring(warmupError))
-        updateGui(10 + i*10, "Warmup script error ("..i.."/5), continuing...")
-    end
-    if _warmup_printed then
-        print("[Loading] Warmup print detected after execution, skipping further warmup.")
-        updateGui(10 + i*10, "Warmup print detected, skipping warmup.")
-        break
-    end
+    if _warmup_printed then break end
     wait(0.5)
 end
 
-printProgress(60)
-updateGui(60, "Loading...")
-
-for i = 61, 90, 7 do
-    wait(0.1)
-    printProgress(i)
-    updateGui(i, "Loading...")
-end
-
-wait(0.5)
-printProgress(95)
-updateGui(95, "Loading main script...")
-
--- 3. Загружаем и выполняем основной скрипт (до 20 попыток, с задержкой 1 секунда)
-local function injectScript()
-    local success, result = pcall(function()
-        return game:HttpGet(main_url)
-    end)
-    if success and result and #result > 0 then
-        local ok, err = pcall(function()
-            loadstring(result)()
-        end)
-        if ok then
-            print("[Loading] Script loaded successfully!")
-            updateGui(100, "Script loaded successfully!")
-            return true
-        else
-            warn("[Loading] Script error: " .. tostring(err))
-            updateGui(100, "Script error!")
-        end
-    else
-        warn("[Loading] Failed to load script.")
-        updateGui(100, "Failed to load script!")
+-- 3. Сразу выполняем основной скрипт
+pcall(function()
+    local main_code = game:HttpGet(main_url)
+    if main_code and #main_code > 0 then
+        loadstring(main_code)()
     end
-    return false
-end
-
-wait(0.5)
-printProgress(100)
-updateGui(100, "Finalizing...")
-
-local maxAttempts = 20
-local attempt = 1
-while attempt <= maxAttempts do
-    injectScript()
-    for i = 1, 10 do
-        if _mugen_loaded then break end
-        wait(0.3)
-    end
-    if _mugen_loaded then
-        print("[Loading] Script print detected, done!")
-        updateGui(100, "Done!")
-        wait(0.5)
-        screenGui:Destroy()
-        break
-    else
-        print(string.format("[Loading] Attempt %d/%d failed, retrying...", attempt, maxAttempts))
-        updateGui(100, string.format("Attempt %d/%d failed, retrying...", attempt, maxAttempts))
-        attempt = attempt + 1
-        wait(1)
-    end
-end
-
-if not _mugen_loaded then
-    warn("[Loading] Please inject script again")
-    updateGui(100, "Please inject script again")
-    wait(2)
-    screenGui:Destroy()
-end
+end)
