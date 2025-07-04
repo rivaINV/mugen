@@ -11,30 +11,125 @@ print = function(...)
     _old_print(...)
 end
 
+-- GUI Loader
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MugenLoaderGui"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.Parent = game:GetService("CoreGui")
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 320, 0, 80)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -40)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local progressBack = Instance.new("Frame")
+progressBack.Size = UDim2.new(1, -20, 0, 20)
+progressBack.Position = UDim2.new(0, 10, 0, 50)
+progressBack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+progressBack.BorderSizePixel = 0
+progressBack.Parent = mainFrame
+progressBack.ZIndex = 0
+
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(0, 0, 0, 20)
+progressBar.Position = UDim2.new(0, 10, 0, 50)
+progressBar.BackgroundColor3 = Color3.fromRGB(125, 85, 255)
+progressBar.BorderSizePixel = 0
+progressBar.Parent = mainFrame
+progressBar.ZIndex = 1
+
+local percentLabel = Instance.new("TextLabel")
+percentLabel.Size = UDim2.new(1, 0, 0, 30)
+percentLabel.Position = UDim2.new(0, 0, 0, 10)
+percentLabel.BackgroundTransparency = 1
+percentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+percentLabel.Font = Enum.Font.GothamBold
+percentLabel.TextSize = 24
+percentLabel.Text = "Loading: 0%"
+percentLabel.Parent = mainFrame
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Position = UDim2.new(0, 0, 0, 40)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 16
+statusLabel.Text = "Warming up the server..."
+statusLabel.Parent = mainFrame
+
+local function updateGui(percent, status)
+    percentLabel.Text = "Loading: " .. percent .. "%"
+    statusLabel.Text = status or ""
+    progressBar.Size = UDim2.new(percent/100, 0, 0, 20)
+end
+
 -- 1. Burst: 10 ping-запросов подряд (без ожидания)
+print("[Loader] Aggressive server wakeup (burst ping)...")
+updateGui(0, "Aggressive server wakeup (burst ping)...")
 for i = 1, 10 do
     pcall(function()
         game:HttpGet(warmup_url)
     end)
 end
+print("[Loader] Burst ping sent.")
+updateGui(5, "Burst ping sent.")
+
+wait(0.5)
+updateGui(10, "Executing warmup script...")
 
 -- 2. Выполнить warmup-скрипт до 5 раз, но если print("loading...") найден — сразу выходим и запускаем основной скрипт
+local warmup_attempts = 0
 for i = 1, 5 do
-    if _warmup_printed then break end
-    pcall(function()
+    if _warmup_printed then
+        print("[Loader] Warmup print detected, skipping further warmup.")
+        updateGui(10 + i*15, "Warmup print detected, skipping warmup.")
+        break
+    end
+    print("[Loader] Warmup script loading, attempt " .. i)
+    updateGui(10 + i*15, "Warmup script loading, attempt " .. i)
+    local warmupSuccess, warmupError = pcall(function()
         local warmup_code = game:HttpGet(warmup_url)
         if warmup_code and #warmup_code > 0 then
             loadstring(warmup_code)()
         end
     end)
-    if _warmup_printed then break end
+    if warmupSuccess then
+        print("[Loader] Warmup script executed ("..i.."/5).")
+        updateGui(10 + i*15, "Warmup script executed ("..i.."/5).")
+    else
+        warn("[Loader] Warmup script error ("..i.."/5): " .. tostring(warmupError))
+        updateGui(10 + i*15, "Warmup script error ("..i.."/5), retrying...")
+    end
+    if _warmup_printed then
+        print("[Loader] Warmup print detected after execution, skipping further warmup.")
+        updateGui(10 + i*15, "Warmup print detected, skipping warmup.")
+        break
+    end
+    warmup_attempts = i
     wait(0.5)
 end
 
+updateGui(90, "Loading main script...")
+print("[Loader] Loading main script...")
+
 -- 3. Сразу выполняем основной скрипт
-pcall(function()
+local mainSuccess, mainError = pcall(function()
     local main_code = game:HttpGet(main_url)
     if main_code and #main_code > 0 then
         loadstring(main_code)()
     end
 end)
+if mainSuccess then
+    print("[Loader] Main script loaded successfully!")
+    updateGui(100, "Main script loaded successfully!")
+else
+    warn("[Loader] Main script error: " .. tostring(mainError))
+    updateGui(100, "Main script error!")
+end
+
+wait(0.7)
+screenGui:Destroy()
